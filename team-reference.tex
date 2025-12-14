@@ -1,0 +1,547 @@
+\documentclass[12pt, a4paper, dwarf]{article}
+
+\usepackage[T1,T2A]{fontenc}     % форматы шрифтов
+\usepackage[utf8x]{inputenc}     % кодировка символов, используемая в данном файле
+\usepackage{mathtools}
+\usepackage[english]{babel}      % пакет русификации
+\usepackage{tikz}                % для создания иллюстраций
+\usepackage{geometry}		     % для настройки размера полей
+\usepackage{indentfirst}         % для отступа в первом абзаце секции
+
+% \lstset{extendedchars=\true}
+\geometry{a4paper,left=30mm,top=30mm,bottom=30mm,right=30mm}
+\setlength{\headheight}{15pt}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+
+% Clear default header/footer
+\fancyhf{}
+
+% Left header: Team name + authors
+\fancyhead[L]{2pink (Grigorev Sergei, Grigorev Andrew, Shelomagin Fedor)}
+
+% Right header: page number "Page X of Y"
+\usepackage{lastpage}
+\fancyhead[R]{Page \thepage\ of \pageref{LastPage}}
+
+% Remove header line
+\renewcommand{\headrulewidth}{0.4pt}
+
+\begin{document}
+
+\section*{Config}
+
+\subsection*{template.cpp}
+
+\begin{verbatim}
+
+#include <bits/stdc++.h>
+
+#define all(x) (x).begin(), (x).end()
+#define rall(x) (x).rbegin(), (x).rend()
+#define pb(a, x) (a).push_back(x)
+
+std::mt19937 rnd(std::chrono::steady_clock::now().time_since_epoch().count());
+
+struct Hash {
+
+    static uint64_t splitmix64(uint64_t x) {
+
+        // http://xorshift.di.unimi.it/splitmix64.c
+        x += 0x9e3779b97f4a7c15;
+        x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9;
+        x = (x ^ (x >> 27)) * 0x94d049bb133111eb;
+        return x ^ (x >> 31);
+
+    }
+
+    size_t operator()(uint64_t x) const {
+
+        static const uint64_t FIXED_RANDOM =
+            std::chrono::steady_clock::now().time_since_epoch().count();
+
+        return splitmix64(x + FIXED_RANDOM);
+
+    }
+
+};
+
+using namespace std;
+
+using ll = long long;
+using ull = unsigned long long;
+
+int main() {
+
+    return 0;
+
+}
+
+\end{verbatim}
+
+\newpage
+\subsection*{vim}
+\normalsize
+
+\begin{verbatim}
+
+" .vimrc
+
+" Sets the default vim settings. 
+source $VIMRUNTIME/defaults.vim
+
+" Disables compatibility with vim
+set nocompatible
+
+" Enables type file detection
+filetype on
+
+" Enables plugins
+filetype plugin on
+
+" Enables indent region when entering new line
+filetype indent on
+
+" Enables syntax highlighting.
+syntax on
+
+" Enable colorsheme
+colorscheme pancake
+
+" Numbers lines of file
+set number
+
+" Status line
+set laststatus=2
+set statusline=%F
+
+" Cursor
+let &t_SI = "\e[5 q"
+let &t_EI = "\e[1 q"
+
+set guicursor=i:blinkwait50-blinkon50-blinkoff50
+
+" Mode transition
+set ttimeoutlen=10
+
+" Don't carry comments on Enter
+autocmd FileType * set formatoptions-=ro
+
+" Key mappings
+map <CR> o<ESC>
+
+" Specifies tab and shift width
+set shiftwidth=4
+set tabstop=4
+set softtabstop=0
+set smarttab
+set expandtab
+
+" Encodings
+set encoding=utf-8
+set fileencodings=utf-8,cp1251
+
+" Navigation with cursor
+set mouse=a
+
+" Copy to clipboard
+set clipboard=unnamed
+
+" Shows closed parantheses
+set showmatch
+
+" Use 256 colors set
+set t_Co=256
+
+""" SEARCH SETTINGS
+" Smart case ignore
+set ignorecase
+set smartcase
+
+" Search highlighting
+set incsearch
+set hlsearch
+
+""" COMMANDS AND MODE SETTINGS
+" Show input commands and current mode
+set showcmd
+set showmode
+
+" Save commands in history
+set history=1000
+
+" Column
+set colorcolumn=120
+
+\end{verbatim}
+
+\newpage
+\section*{FFT}
+
+\subsection*{Problem}
+
+Evaluate the product of two polynomials $C(x) = A(x) \cdot B(x)$
+$$A(x) = a_nx^n + \ldots + a_1x + a_0$$
+$$B(x) = b_nx^n + \ldots + b_1x + b_0$$
+
+\subsection*{Algorithm}
+
+$$C(x) = IFFT(FFT(A(x)) * FFT(B(x)))$$
+\vspace{1mm}
+
+There, $FFT(A(x))$ and $FFT(B(x))$ are computed at $2n + 1$ points of unit complex circle. \\
+
+So, $FFT$ of $P(x)$ computed at $n$ points is $FFT(P(x)) = (P(w_0^1), \ldots, P(w_0^{n}))$, where $w_0^{k} = e^{\frac{2\pi i}{n}k}$. Note, that here we should choose $n = 2^m$ \\
+
+To compute this in $\mathcal{O}(nlogn)$ time we use divide and conquer algorithm:
+
+\centering
+$P(x) = P_e(x^2) + x \cdot P_o(x^2)$
+\vspace{2mm}
+
+\centering
+$P_e(x^2)$ -- even powers of $P(x)$
+\vspace{2mm}
+
+\centering
+$x \cdot P_o(x^2)$ -- odd powers of $P(x)$
+\vspace{1mm}
+
+\flushleft
+Then, for $j = 0 \ldots \frac{n}{2}-1$ we do this:
+\vspace{5mm}
+
+\centering
+$ P(w_o^j) = P_e(w_o^{2j}) + w_o^j \cdot P_o(w_o^{2j}) $
+\vspace{2mm}
+
+\centering
+$ P(w_o^{j+\frac{n}{2}}) = P_e(w_o^{2j}) - w_o^j \cdot P_o(w_o^{2j}) $
+\vspace{2mm}
+
+\flushleft
+Note, that it is the same as computing $FFT(P_e(x))$ and $FFT(P_o(x))$ at $\frac{n}{2}$ points and then combining the result, using the above relations.
+
+\newpage
+\subsection*{Code}
+\normalsize
+
+\begin{verbatim}
+
+using cd = complex<double>;
+const double PI = acos(-1);
+
+void fft(vector<cd> & a, bool invert) {
+    int n = a.size();
+    if (n == 1) return;
+
+    vector<cd> a0(n / 2), a1(n / 2);
+    for (int i = 0; 2 * i < n; i++) {
+        a0[i] = a[2*i];
+        a1[i] = a[2*i+1];
+    }
+    fft(a0, invert); fft(a1, invert);
+
+    double ang = 2 * PI / n * (invert ? -1 : 1);
+    cd w(1), wn(cos(ang), sin(ang));
+    for (int i = 0; 2 * i < n; i++) {
+        a[i] = a0[i] + w * a1[i];
+        a[i + n/2] = a0[i] - w * a1[i];
+        if (invert) {
+            a[i] /= 2;
+            a[i + n/2] /= 2;
+        }
+        w *= wn;
+    }
+}
+
+vector<int> multiply(vector<int> const& a, vector<int> const& b) {
+    vector<cd> fa(a.begin(), a.end()), fb(b.begin(), b.end());
+    int n = 1;
+    while (n < a.size() + b.size()) 
+        n <<= 1;
+    fa.resize(n); fb.resize(n);
+
+    fft(fa, false); fft(fb, false);
+    for (int i = 0; i < n; i++)
+        fa[i] *= fb[i];
+    fft(fa, true);
+
+    vector<int> result(n);
+    for (int i = 0; i < n; i++)
+        result[i] = round(fa[i].real());
+    return result;
+}
+\end{verbatim}
+
+\section*{Knapsack}
+
+\subsection*{0-1 knapsack}
+
+Can use each item only once.
+
+\large
+$$f_{i,j} = \max(f_{i-1, j}, f_{i-1, j-w_i} + v_i)$$
+$$f_j \leftarrow \max(f_j, f_{j-w_i} + v_i)$$
+$$j = W \ldots w[i]$$
+
+\normalsize
+\begin{verbatim}
+
+// C++
+for (int i = 1; i <= n; i++)
+    for (int j = W; j >= w[i]; j--)
+        f[j] = max(f[j], f[j - w[i]] + v[i]);
+
+\end{verbatim}
+
+\subsection*{Complete knapsack}
+
+\normalsize
+Can use each item unlimited number of times.
+
+\large
+$$f_{i, j} = \max_{k \ge 0}(f_{i-1, j-k \cdot w_i} + k \cdot v_i)$$
+
+\normalsize
+This is the same as:
+
+\large
+$$f_{i, j} = \max(f_{i-1, j}, f_{i, j-w_i} + v_i)$$
+$$f_j \leftarrow \max(f_j, f_{j-w_i} + v_i)$$
+$$j = w[i] \ldots W$$
+
+\normalsize
+\begin{verbatim}
+
+// C++
+for (int i = 1; i <= n; i++)
+  for (int j = w[i]; j <= W; j++)
+    f[j] = max(f[j], f[j - w[i]] + v[i]);
+
+\end{verbatim}
+
+\newpage
+\section*{Fenwick tree}
+
+\normalsize
+\begin{verbatim}
+\\ C++
+
+void update(int k, int delta) {
+
+    while (k < mxN) {
+        T[k] += delta;
+        k = k | (k + 1);
+    }
+
+}
+
+ll pref(int i) {
+
+    ll sum = 0;
+    while (i >= 0) {
+        sum += T[i];
+        i = i & (i + 1)
+        i--;
+    }
+    return sum;
+
+}
+
+void build() {
+
+    for (int k = 0; k < n; k++) {
+        update(k, a[k]);
+    }
+
+}
+
+void change(int k, int u) {
+
+    int delta = u - a[k];
+    a[k] = u;
+    update(k, delta);
+
+}
+
+inline ll getsum(int l, int r) {
+
+    return pref(r) - pref(l - 1);
+
+}
+\end{verbatim}
+
+\newpage
+\section*{Segment tree}
+
+\begin{verbatim}
+
+// C++
+
+constexpr int mxN = 2e5L;
+constexpr int inf = 2e9L;
+
+int n;
+int segsize;
+int a[mxN];
+int tree[2 * mxN];
+
+int nextb(int x) {
+
+    x |= (x >> 1);
+    x |= (x >> 2);
+    x |= (x >> 4);
+    x |= (x >> 8);
+    x |= (x >> 16);
+    return x + 1;
+
+}
+
+void update(int k, int u) {
+
+    int l = 0, r = segsize - 1;
+    int index = 0;
+    while (l < r) {
+
+        int mid = (l + r) >> 1;
+        if (k <= mid) {
+            r = mid;
+            index = 2 * index + 1;
+        } else {
+            l = mid + 1;
+            index = 2 * index + 2;
+        }
+
+    }
+
+    tree[index] = u;
+    while (index > 0) {
+
+        index = (index - 1) >> 1;
+        tree[index] = min(tree[2 * index + 1], tree[2 * index + 2]);
+
+    }
+
+}
+
+void build() {
+
+    fill(tree, tree + 2 * mxN, inf);
+    segsize = nextb(n - 1);
+
+    for (int k = 0; k < n; k++) {
+        update(k, a[k]);
+    }
+
+}
+
+int getmin(int l, int r, int index, int size, int mid) {
+
+    if (r - l + 1 == size)
+        return tree[index];
+
+    int off = size >> 2;
+
+    if (l <= mid && mid < r)
+        return min(getmin(l, mid, 2 * index + 1, size >> 1, mid - off),
+                   getmin(mid + 1, r, 2 * index + 2, size >> 1, mid + off));
+
+    if (r <= mid)
+        return getmin(l, r, 2 * index + 1, size >> 1, mid - off);
+
+    // l > mid
+    return getmin(l, r, 2 * index + 2, size >> 1, mid + off);
+
+}
+
+int main() { 
+
+    // int mn = getmin(l, r, 0, segsize, (segsize - 1) >> 1);
+	return 0;
+
+}
+
+\end{verbatim}
+
+\newpage
+\section*{Dijkstra}
+
+\begin{verbatim}
+// C++
+
+vector<int> dijkstra(int start) {
+    vector<int> d(n, inf);
+    d[start] = 0;
+    set< pair<int, int> > q;
+    q.insert({0, start});
+
+    while (!q.empty()) {
+        int v = q.begin()->second;
+        q.erase(q.begin());
+
+        for (auto [u, w] : g[v]) {
+
+            if (d[u] > d[v] + w) {
+                q.erase({d[u], u});
+                d[u] = d[v] + w;
+                q.insert({d[u], u});
+            }
+
+        }
+
+    }
+    return d;
+}
+\end{verbatim}
+
+\section*{Prefix function}
+
+\begin{verbatim}
+// C++
+
+vector<int> prefix_function(string s) {
+    int n = (int) s.size();
+    vector<int> p(n, 0);
+    for (int i = 1; i < n; i++) {
+        int cur = p[i - 1];
+
+        while (s[i] != s[cur] && cur > 0)
+            cur = p[cur - 1];
+
+        if (s[i] == s[cur])
+            p[i] = cur + 1;
+    }
+    return p;
+}
+\end{verbatim}
+
+\newpage
+\section*{Prim's Algorithm}
+
+\begin{verbatim}
+// C++
+// Complexity: O(mlogn)
+
+set< pair<int, int> > q;
+int d[maxn];
+
+while (q.size()) {
+    v = q.begin()->second;
+    q.erase(q.begin());
+
+    for (auto e : g[v]) {
+        int u = e.first, w = e.second;
+        if (w < d[u]) {
+            q.erase({d[u], u});
+            d[u] = w;
+            q.insert({d[u], u});
+        }
+    }
+}
+
+\end{verbatim}
+
+\end{document}
+
