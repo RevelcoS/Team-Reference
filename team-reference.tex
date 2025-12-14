@@ -179,100 +179,143 @@ set colorcolumn=120
 \newpage
 \section*{FFT}
 
-\subsection*{Problem}
-
-Evaluate the product of two polynomials $C(x) = A(x) \cdot B(x)$
-$$A(x) = a_nx^n + \ldots + a_1x + a_0$$
-$$B(x) = b_nx^n + \ldots + b_1x + b_0$$
-
-\subsection*{Algorithm}
-
-$$C(x) = IFFT(FFT(A(x)) * FFT(B(x)))$$
-\vspace{1mm}
-
-There, $FFT(A(x))$ and $FFT(B(x))$ are computed at $2n + 1$ points of unit complex circle. \\
-
-So, $FFT$ of $P(x)$ computed at $n$ points is $FFT(P(x)) = (P(w_0^1), \ldots, P(w_0^{n}))$, where $w_0^{k} = e^{\frac{2\pi i}{n}k}$. Note, that here we should choose $n = 2^m$ \\
-
-To compute this in $\mathcal{O}(nlogn)$ time we use divide and conquer algorithm:
-
-\centering
-$P(x) = P_e(x^2) + x \cdot P_o(x^2)$
-\vspace{2mm}
-
-\centering
-$P_e(x^2)$ -- even powers of $P(x)$
-\vspace{2mm}
-
-\centering
-$x \cdot P_o(x^2)$ -- odd powers of $P(x)$
-\vspace{1mm}
-
-\flushleft
-Then, for $j = 0 \ldots \frac{n}{2}-1$ we do this:
-\vspace{5mm}
-
-\centering
-$ P(w_o^j) = P_e(w_o^{2j}) + w_o^j \cdot P_o(w_o^{2j}) $
-\vspace{2mm}
-
-\centering
-$ P(w_o^{j+\frac{n}{2}}) = P_e(w_o^{2j}) - w_o^j \cdot P_o(w_o^{2j}) $
-\vspace{2mm}
-
-\flushleft
-Note, that it is the same as computing $FFT(P_e(x))$ and $FFT(P_o(x))$ at $\frac{n}{2}$ points and then combining the result, using the above relations.
-
-\newpage
-\subsection*{Code}
-\normalsize
-
 \begin{verbatim}
+// 998244353 = 1 + 7 * 17 * 2^23 = 1 + c * 2 ^ k
+// Primitive root: r = 3
+// w = r^c = 3^(7 * 17)
+// w^(2^23) = 1
 
-using cd = complex<double>;
-const double PI = acos(-1);
+ll mod = 998244353LL;
+constexpr ll mxN = 5e5L;
 
-void fft(vector<cd> & a, bool invert) {
-    int n = a.size();
-    if (n == 1) return;
+ll roots[32];
+ll inv_roots[32];
+ll fact[mxN + 1];
 
-    vector<cd> a0(n / 2), a1(n / 2);
-    for (int i = 0; 2 * i < n; i++) {
-        a0[i] = a[2*i];
-        a1[i] = a[2*i+1];
+ll rootN = 23;
+
+ll binpow(ll x, ll p) {
+
+    ll res = 1;
+    while (p > 0) {
+
+        if (p & 1)
+            res = res * x % mod;
+
+        p >>= 1;
+        x = x * x % mod;
+
     }
-    fft(a0, invert); fft(a1, invert);
 
-    double ang = 2 * PI / n * (invert ? -1 : 1);
-    cd w(1), wn(cos(ang), sin(ang));
-    for (int i = 0; 2 * i < n; i++) {
-        a[i] = a0[i] + w * a1[i];
-        a[i + n/2] = a0[i] - w * a1[i];
-        if (invert) {
-            a[i] /= 2;
-            a[i + n/2] /= 2;
+    return res;
+
+}
+
+ll inv(ll x) {
+    return binpow(x, mod - 2);
+}
+
+ll reverse(ll num, int lgN) {
+
+    ll res = 0;
+    for (int i = 0; i < lgN; i++) {
+        if (num & (1LL << i))
+            res |= 1LL << (lgN - i - 1);
+    }
+
+    return res;
+
+}
+
+void precomp_roots() {
+
+    roots[0] = binpow(3, 7 * 17);
+
+    for (int i = 1; i <= rootN; i++) {
+        roots[i] = roots[i-1] * roots[i-1] % mod;
+    }
+
+    inv_roots[0] = inv(roots[0]);
+    for (int i = 1; i <= rootN; i++) {
+        inv_roots[i] = inv_roots[i-1] * inv_roots[i-1] % mod;
+    }
+
+}
+
+// const double PI = acos(-1);
+
+void fft(vector<ll> &a, bool invert) {
+
+    ll N = a.size();
+    ll lgN = 0;
+    while ((1 << lgN) < N)
+        lgN++;
+
+    for (int i = 0; i < N; i++) {
+        int needI = reverse(i, lgN);
+        if (i < needI)
+            swap(a[i], a[needI]);
+    }
+
+    for (ll power = 1; power <= lgN; power++) {
+
+        ll root = invert ? roots[rootN - power] : inv_roots[rootN - power];
+        ll len = 1LL << power;
+
+        // double ang = 2 * PI / len * (invert ? -1 : 1);
+        // complex<double> root(cos(ang), sin(ang));
+
+        for (ll i = 0; i < N; i += len) {
+
+            ll w = 1;
+            for (ll j = 0; j < (len >> 1); j++) {
+
+                ll u = a[i + j];
+                ll v = a[i + j + (len >> 1)] * w % mod;
+
+                a[i + j] = (u + v) % mod;
+                a[i + j + (len >> 1)] = (u - v + mod) % mod;
+
+                w = w * root % mod;
+
+            }
+
         }
-        w *= wn;
+
     }
+
+    if (invert) {
+
+        ll invN = inv(N);
+        for (ll i = 0; i < N; i++)
+            a[i] = a[i] * invN % mod;
+
+    }
+
 }
 
-vector<int> multiply(vector<int> const& a, vector<int> const& b) {
-    vector<cd> fa(a.begin(), a.end()), fb(b.begin(), b.end());
-    int n = 1;
-    while (n < a.size() + b.size()) 
-        n <<= 1;
-    fa.resize(n); fb.resize(n);
+void mult(vector<ll> &A, vector<ll> &B) {
 
-    fft(fa, false); fft(fb, false);
-    for (int i = 0; i < n; i++)
-        fa[i] *= fb[i];
-    fft(fa, true);
+    ll N = 1;
+    while (N < A.size() + B.size())
+        N <<= 1;
 
-    vector<int> result(n);
-    for (int i = 0; i < n; i++)
-        result[i] = round(fa[i].real());
-    return result;
+    A.resize(N);
+    B.resize(N);
+
+    fft(A, false);
+    fft(B, false);
+    for (ll i = 0; i < N; i++)
+        A[i] = A[i] * B[i] % mod;
+
+    fft(A, true);
+
+    // vector<int> result(N);
+    // for (int i = 0; i < N; i++)
+    //    result[i] = round(A[i].real());
+
 }
+
 \end{verbatim}
 
 \section*{Knapsack}
@@ -281,12 +324,10 @@ vector<int> multiply(vector<int> const& a, vector<int> const& b) {
 
 Can use each item only once.
 
-\large
 $$f_{i,j} = \max(f_{i-1, j}, f_{i-1, j-w_i} + v_i)$$
 $$f_j \leftarrow \max(f_j, f_{j-w_i} + v_i)$$
 $$j = W \ldots w[i]$$
 
-\normalsize
 \begin{verbatim}
 
 // C++
@@ -298,16 +339,10 @@ for (int i = 1; i <= n; i++)
 
 \subsection*{Complete knapsack}
 
-\normalsize
 Can use each item unlimited number of times.
-
-\large
 $$f_{i, j} = \max_{k \ge 0}(f_{i-1, j-k \cdot w_i} + k \cdot v_i)$$
 
-\normalsize
 This is the same as:
-
-\large
 $$f_{i, j} = \max(f_{i-1, j}, f_{i, j-w_i} + v_i)$$
 $$f_j \leftarrow \max(f_j, f_{j-w_i} + v_i)$$
 $$j = w[i] \ldots W$$
@@ -544,4 +579,3 @@ while (q.size()) {
 \end{verbatim}
 
 \end{document}
-
